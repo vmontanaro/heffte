@@ -180,6 +180,7 @@ void benchmark_fft(std::array<int,3> size_fft, std::deque<std::string> const &ar
             fft.backward(batch_size, output_array, input_array, workspace.data());
         }
     }
+
     #ifdef Heffte_ENABLE_GPU
     if (backend::uses_gpu<backend_tag>::value)
         gpu::synchronize_default_stream();
@@ -197,6 +198,8 @@ void benchmark_fft(std::array<int,3> size_fft, std::deque<std::string> const &ar
     if (std::is_same<backend_tag, gpu_backend>::value){
         output = gpu::transfer::unload(gpu_output);
         result = output.data();
+        if(mpi::world_rank(0))
+            cout << result[3] << endl;
     }
     #endif
     #ifdef BENCH_R2C
@@ -287,10 +290,10 @@ int main(int argc, char *argv[]){
 #ifdef BENCH_R2R
     std::string backends = "stock-cos stock-sin ";
     #ifdef Heffte_ENABLE_FFTW
-    backends += "fftw-cos fftw-sin ";
+    backends += "fftw-cos fftw-sin fftw-cos1";
     #endif
     #ifdef Heffte_ENABLE_CUDA
-    backends += "cufft-cos cufft-sin ";
+    backends += "cufft-cos cufft-sin cufft-cos1";
     #endif
     #ifdef Heffte_ENABLE_ROCM
     backends += "rocfft-cos rocfft-sin ";
@@ -397,7 +400,8 @@ int main(int argc, char *argv[]){
     bool valid_backend = false;
 #ifdef BENCH_R2R
     #ifdef Heffte_ENABLE_FFTW
-    valid_backend = valid_backend or perform_benchmark<backend::fftw_cos>(precision_string, backend_string, "fftw-cos", size_fft, arguments(argc, argv));
+    valid_backend = valid_backend or perform_benchmark<backend::fftw_cos>(precision_string, backend_string, "fftw-cos", size_fft, arguments(argc, argv))
+                        or perform_benchmark<backend::fftw_cos1>(precision_string, backend_string, "fftw-cos1", size_fft, arguments(argc, argv));
     valid_backend = valid_backend or perform_benchmark<backend::fftw_sin>(precision_string, backend_string, "fftw-sin", size_fft, arguments(argc, argv));
     #endif
     valid_backend = valid_backend or perform_benchmark<backend::stock_cos>(precision_string, backend_string, "stock-cos", size_fft, arguments(argc, argv));
@@ -407,7 +411,8 @@ int main(int argc, char *argv[]){
     valid_backend = valid_backend or perform_benchmark<backend::mkl_sin>(precision_string, backend_string, "mkl-sin", size_fft, arguments(argc, argv));
     #endif
     #ifdef Heffte_ENABLE_CUDA
-    valid_backend = valid_backend or perform_benchmark<backend::cufft_cos>(precision_string, backend_string, "cufft-cos", size_fft, arguments(argc, argv));
+    valid_backend = valid_backend or perform_benchmark<backend::cufft_cos>(precision_string, backend_string, "cufft-cos", size_fft, arguments(argc, argv)) 
+                        or perform_benchmark<backend::cufft_cos1>(precision_string, backend_string, "cufft-cos1", size_fft, arguments(argc, argv)) ;
     valid_backend = valid_backend or perform_benchmark<backend::cufft_sin>(precision_string, backend_string, "cufft-sin", size_fft, arguments(argc, argv));
     #endif
     #ifdef Heffte_ENABLE_ROCM
