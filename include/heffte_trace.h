@@ -114,7 +114,6 @@ namespace heffte {
         std::deque<event> avg_log;
 
         avg_log = std::deque<event>();
-
         MPI_Barrier(MPI_COMM_WORLD);
 
         for(auto const &e : event_log){
@@ -127,7 +126,8 @@ namespace heffte {
             avg_start_time /= mpi::comm_size(MPI_COMM_WORLD);
             avg_duration /= mpi::comm_size(MPI_COMM_WORLD);
             
-            ofs << std::setw(40) << e.name << std::setw(25) << avg_start_time << std::setw(25) << avg_duration << "\n"; 
+            if(mpi::world_rank(0))
+                ofs << std::setw(40) << e.name << std::setw(25) << avg_start_time << std::setw(25) << avg_duration << "\n"; 
         }
             
     }
