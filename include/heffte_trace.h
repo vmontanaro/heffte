@@ -101,7 +101,7 @@ namespace heffte {
      */
     inline void init_tracing(std::string root_filename){
         event_log = std::deque<event>();
-        log_filename = root_filename + "_" + std::to_string(mpi::world_rank()) + ".log";
+        log_filename = root_filename + ".log"; //"_" + std::to_string(mpi::world_rank()) + ".log";
     }
 
     /*!
@@ -110,10 +110,26 @@ namespace heffte {
      */
     inline void finalize_tracing(){
         std::ofstream ofs(log_filename);
-        ofs.precision(12);
+        ofs.precision(16);
+        std::deque<event> avg_log;
 
-        for(auto const &e : event_log)
-            ofs << std::setw(40) << e.name << std::setw(20) << e.start_time << std::setw(20) << e.duration << "\n";
+        avg_log = std::deque<event>();
+
+        MPI_Barrier(MPI_COMM_WORLD);
+
+        for(auto const &e : event_log){
+            double avg_start_time=0.;
+            double avg_duration=0.;
+
+            MPI_Reduce(&e.start_time, &avg_start_time, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+            MPI_Reduce(&e.duration, &avg_duration, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+
+            avg_start_time /= mpi::comm_size(MPI_COMM_WORLD);
+            avg_duration /= mpi::comm_size(MPI_COMM_WORLD);
+            
+            ofs << std::setw(40) << e.name << std::setw(25) << avg_start_time << std::setw(25) << avg_duration << "\n"; 
+        }
+            
     }
 
     #else
