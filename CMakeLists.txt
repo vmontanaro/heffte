@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.19)
 
-project("Heffte" VERSION 2.3.0 LANGUAGES CXX)
+project("Heffte" VERSION 2.4.0 LANGUAGES CXX)
 
 option(Heffte_ENABLE_FFTW     "Enable the FFTW backend"            OFF)
 option(Heffte_ENABLE_CUDA     "Enable the CUDA and cuFFT backend"  OFF)
@@ -21,6 +21,12 @@ option(Heffte_ENABLE_SWIG     "Rebuild the SWIG bindings." OFF)
 option(Heffte_ENABLE_TRACING  "Enable the tracing capabilities"  OFF)
 
 option(BUILD_SHARED_LIBS      "Builds shared libraries using CMake conventions"  ON)
+
+if (${CMAKE_PROJECT_NAME} STREQUAL ${PROJECT_NAME})
+    option(Heffte_ENABLE_TESTING "Enable the internal unit tests" ON)
+else()
+    option(Heffte_ENABLE_TESTING "Enable the internal unit tests" OFF)
+endif()
 
 option(Heffte_SEQUENTIAL_TESTING  "Force all tests to run sequentially to avoid oversubscribing resources."  OFF)
 
@@ -61,6 +67,10 @@ endif()
 # Set default install path to build
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set (CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE PATH "default install path" FORCE )
+endif()
+
+if (Heffte_ENABLE_TESTING)
+    enable_testing()
 endif()
 
 # try to find git and if available, set the hit-hash into the header
@@ -198,26 +208,44 @@ endif()
 ###########################
 # GNU Make dependencies
 ###########################
+set(heffte_dep_libs_list "")
+set(heffte_dep_includes_list "")
+if (TARGET Heffte::FFTW)
+    list(APPEND heffte_dep_libs_list ${FFTW_LIBRARIES})
+    list(APPEND heffte_dep_includes_list ${FFTW_INCLUDES})
+endif()
+if (TARGET Heffte::MKL)
+    list(APPEND heffte_dep_libs_list ${Heffte_MKL_LIBRARIES})
+    list(APPEND heffte_dep_includes_list ${Heffte_MKL_INCLUDES})
+endif()
+if (TARGET CUDA::cufft)
+    get_target_property(_heffte_list CUDA::cufft IMPORTED_LOCATION)
+    list(APPEND heffte_dep_libs_list ${_heffte_list})
+    get_target_property(_heffte_list CUDA::cudart IMPORTED_LOCATION)
+    list(APPEND heffte_dep_libs_list ${_heffte_list})
+    list(APPEND heffte_dep_includes_list ${CUDAToolkit_INCLUDE_DIRS})
+endif()
+if (TARGET roc::rocfft)
+    list(APPEND heffte_dep_libs_list -L${rocfft_INCLUDE_DIR}/../lib/ -lrocfft )
+    list(APPEND heffte_dep_includes_list ${HIP_INCLUDE_DIR})
+    list(APPEND heffte_dep_includes_list ${rocfft_INCLUDE_DIR})
+endif()
 set(heffte_dep_libs "")
-get_target_property(_heffte_list Heffte LINK_LIBRARIES)
-foreach(_heffte_lib_ ${_heffte_list})
-    if (NOT TARGET ${_heffte_lib_})
-        set(heffte_dep_libs "${heffte_dep_libs} ${_heffte_lib_}")
-    else()
-        get_target_property(_heffte_list2 ${_heffte_lib_} LINK_LIBRARIES)
-        if (NOT _heffte_list2)
-            get_target_property(_heffte_list2 ${_heffte_lib_} INTERFACE_LINK_LIBRARIES)
-        endif()
-        message("Processing: ${_heffte_lib_} with libraries: ${_heffte_list2}")
-        if (_heffte_list2)
-            foreach(_heffte_lib2_ ${_heffte_list2})
-                if (NOT TARGET ${_heffte_lib2_})
-                    set(heffte_dep_libs "${heffte_dep_libs} ${_heffte_lib2_}")
-                endif()
-            endforeach()
-        endif()
-    endif()
+foreach(_heffte_var ${heffte_dep_libs_list})
+    set(heffte_dep_libs "${heffte_dep_libs} ${_heffte_var}")
 endforeach()
+set(heffte_dep_includes "")
+foreach(_heffte_var ${heffte_dep_includes_list})
+    set(heffte_dep_includes "${heffte_dep_includes} -I${_heffte_var}")
+endforeach()
+
+if (Heffte_ENABLE_AVX)
+    set(heffte_dep_includes "${heffte_dep_includes} -mfma -mavx")
+endif()
+if (Heffte_ENABLE_AVX512)
+    set(heffte_dep_includes "${heffte_dep_includes} -mavx512f -mavx512dq")
+endif()
+
 if (Heffte_ENABLE_FORTRAN)
     set(heffte_fortran_backends "")
     foreach(heffte_backend stock fftw mkl cufft rocfft onemkl)
@@ -265,12 +293,12 @@ configure_package_config_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/HeffteConfig.cm
 ######################
 # EXAMPLES and TESTS #
 ######################
-if (${CMAKE_PROJECT_NAME} STREQUAL ${PROJECT_NAME})
+if (Heffte_ENABLE_TESTING)
     add_subdirectory(benchmarks)
     add_subdirectory(examples)
-    enable_testing()
     add_subdirectory(test)
-else()
+endif()
+if (${CMAKE_PROJECT_NAME} STREQUAL ${PROJECT_NAME})
     if (CUDA_INCLUDE_DIRS)
         # cuda_add_library() apparently adds the includes as private
         target_include_directories(Heffte PUBLIC ${CUDA_INCLUDE_DIRS})
@@ -295,9 +323,11 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/configured/CMakeLists.txt"
 ##############################
 # Examples for post install
 ##############################
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/ExampleCMakeLists.cmake" "${CMAKE_CURRENT_BINARY_DIR}/examples/CMakeLists.txt" @ONLY)
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/examples/CMakeLists.txt" DESTINATION share/heffte/examples)
-install(DIRECTORY examples/ DESTINATION share/heffte/examples FILES_MATCHING PATTERN "*.cpp" PATTERN "*.c" PATTERN "*.f90")
+if (Heffte_ENABLE_TESTING)
+    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/ExampleCMakeLists.cmake" "${CMAKE_CURRENT_BINARY_DIR}/examples/CMakeLists.txt" @ONLY)
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/examples/CMakeLists.txt" DESTINATION share/heffte/examples)
+    install(DIRECTORY examples/ DESTINATION share/heffte/examples FILES_MATCHING PATTERN "*.cpp" PATTERN "*.c" PATTERN "*.f90")
+endif()
 
 # print summary of the CMake options, skip if using add_subdirectory(heffte)
 if (${CMAKE_PROJECT_NAME} STREQUAL ${PROJECT_NAME})
