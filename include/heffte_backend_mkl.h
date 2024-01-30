@@ -44,6 +44,11 @@ namespace backend{
     template<> struct is_enabled<mkl_sin> : std::true_type{};
     /*!
      * \ingroup hefftemkl
+     * \brief Indicate that the MKL Cosine Transform type I backend has been enabled.
+     */
+    template<> struct is_enabled<mkl_cos1> : std::true_type{};
+    /*!
+     * \ingroup hefftemkl
      * \brief Make MKL the default CPU backend.
      */
     template<> struct default_backend<tag::cpu> {
@@ -481,6 +486,18 @@ template<> struct one_dim_backend<backend::mkl_sin>{
     //! \brief Defines the real-to-complex executor.
     using executor_r2c = void;
 };
+/*!
+ * \ingroup hefftemkl
+ * \brief Helper struct that defines the types and creates instances of one-dimensional executors.
+ *
+ * The struct is specialized for each backend.
+ */
+template<> struct one_dim_backend<backend::mkl_cos1>{
+    //! \brief Defines the complex-to-complex executor.
+    using executor = real2real_executor<backend::mkl, cpu_cos1_pre_pos_processor>;
+    //! \brief Defines the real-to-complex executor.
+    using executor_r2c = void;
+};
 
 /*!
  * \ingroup hefftemkl
@@ -503,6 +520,14 @@ template<> struct default_plan_options<backend::mkl_cos>{
  * \brief Sets the default options for the mkl backend.
  */
 template<> struct default_plan_options<backend::mkl_sin>{
+    //! \brief The reshape operations will not transpose the data.
+    static const bool use_reorder = true;
+};
+/*!
+ * \ingroup hefftemkl
+ * \brief Sets the default options for the mkl backend.
+ */
+template<> struct default_plan_options<backend::mkl_cos1>{
     //! \brief The reshape operations will not transpose the data.
     static const bool use_reorder = true;
 };

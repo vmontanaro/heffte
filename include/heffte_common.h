@@ -149,6 +149,11 @@ namespace backend {
      * \brief Type-tag for the Sine Transform using the MKL FFT backend
      */
     struct mkl_sin{};
+    /*!
+     * \ingroup hefftemkl
+     * \brief Type-tag for the Cosine Transform type 1 using the MKL FFT backend
+     */
+    struct mkl_cos1{};
 
     /*!
      * \ingroup hefftecuda
@@ -310,12 +315,18 @@ namespace backend {
      * \ingroup hefftemkl
      * \brief Returns the human readable name of the MKL backend.
      */
-    template<> inline std::string name<mkl_cos>(){ return "mkl-cos"; }
+    template<> inline std::string name<mkl_cos>(){ return "mkl-cos-type-II"; }
     /*!
      * \ingroup hefftemkl
      * \brief Returns the human readable name of the MKL backend.
      */
-    template<> inline std::string name<mkl_sin>(){ return "mkl-sin"; }
+    template<> inline std::string name<mkl_sin>(){ return "mkl-sin-type-II"; }
+    /*!
+     * \ingroup hefftemkl
+     * \brief Returns the human readable name of the MKL backend.
+     */
+    template<> inline std::string name<mkl_cos1>(){ return "mkl-cos-type-I"; }
+
     /*!
      * \ingroup hefftecuda
      * \brief Returns the human readable name of the cuFFT backend.
@@ -367,12 +378,12 @@ namespace backend {
      * \ingroup heffteoneapi
      * \brief Returns the human readable name of the oneMKL backend.
      */
-    template<> inline std::string name<onemkl_cos>(){ return "onemkl-cos"; }
+    template<> inline std::string name<onemkl_cos>(){ return "onemkl-cos-type-II"; }
     /*!
      * \ingroup heffteoneapi
      * \brief Returns the human readable name of the oneMKL backend.
      */
-    template<> inline std::string name<onemkl_sin>(){ return "onemkl-sin"; }
+    template<> inline std::string name<onemkl_sin>(){ return "onemkl-sin-type-II"; }
 
     /*!
      * \ingroup fft3dbackend
@@ -704,8 +715,6 @@ constexpr bool has_executor2d(){
             or std::is_same<backend_tag, backend::stock_cos>::value
             or std::is_same<backend_tag, backend::mkl_cos>::value
             or std::is_same<backend_tag, backend::cufft_cos>::value
-            or std::is_same<backend_tag, backend::cufft_cos1>::value
-            or std::is_same<backend_tag, backend::rocfft_cos1>::value
             or std::is_same<backend_tag, backend::rocfft_cos>::value
             or std::is_same<backend_tag, backend::onemkl_cos>::value
             or std::is_same<backend_tag, backend::stock_sin>::value
@@ -713,6 +722,9 @@ constexpr bool has_executor2d(){
             or std::is_same<backend_tag, backend::cufft_sin>::value
             or std::is_same<backend_tag, backend::rocfft_sin>::value
             or std::is_same<backend_tag, backend::onemkl_sin>::value
+            or std::is_same<backend_tag, backend::mkl_cos1>::value
+            or std::is_same<backend_tag, backend::cufft_cos1>::value
+            or std::is_same<backend_tag, backend::rocfft_cos1>::value
             );
 }
 /*!
@@ -725,8 +737,6 @@ constexpr bool has_executor3d(){
             or std::is_same<backend_tag, backend::stock_cos>::value
             or std::is_same<backend_tag, backend::mkl_cos>::value
             or std::is_same<backend_tag, backend::cufft_cos>::value
-            or std::is_same<backend_tag, backend::cufft_cos1>::value
-            or std::is_same<backend_tag, backend::rocfft_cos1>::value
             or std::is_same<backend_tag, backend::rocfft_cos>::value
             or std::is_same<backend_tag, backend::onemkl_cos>::value
             or std::is_same<backend_tag, backend::stock_sin>::value
@@ -734,6 +744,9 @@ constexpr bool has_executor3d(){
             or std::is_same<backend_tag, backend::cufft_sin>::value
             or std::is_same<backend_tag, backend::rocfft_sin>::value
             or std::is_same<backend_tag, backend::onemkl_sin>::value
+            or std::is_same<backend_tag, backend::mkl_cos1>::value
+            or std::is_same<backend_tag, backend::cufft_cos1>::value
+            or std::is_same<backend_tag, backend::rocfft_cos1>::value
             );
 }
 
